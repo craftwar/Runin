@@ -1,0 +1,27 @@
+version: '{build}'
+skip_commits:
+  files:
+    - README.md
+image: Visual Studio 2017
+init:
+- ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
+
+build_script:
+- '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64_x86' #use cross build x86 to speed up?
+- call msbuild /m /p:Configuration=Release /p:Platform=x86 Runin.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+- 7z a %APPVEYOR_BUILD_FOLDER%\Runin.7z -mx=9 -myx=9 Release\Runin.exe Runin\ReadME.txt
+
+- set release=%APPVEYOR_REPO_COMMIT:~0,7%
+
+test: off
+artifacts:
+- path: Runin.7z
+deploy:
+  - provider: GitHub
+    tag: git
+    release: $(release)
+    auth_token:
+      secure: KxeGOEgx0+XWdjLWDsyhC+B/w3m8zpvtVY/e+90lCLZgd/2VSuraPZDxdIPB5rfY
+    force_update: true
+    on:
+      branch: master
