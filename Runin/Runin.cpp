@@ -4,9 +4,12 @@
 
 #define WSTRCMP_CONST(str, const_str) \
 	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*const_str))
+void test();
 
 HWND new_proc_hwnd = NULL;
-bool g_removeTitle = false;
+//bool g_removeTitle = false;
+bool g_removeMenu = false;
+LONG_PTR g_removeWindowStyle = 0;
 
 // reference
 // https://stackoverflow.com/questions/6041615/c-finding-the-gui-thread-from-a-list-of-thread-ids
@@ -19,12 +22,15 @@ BOOL CALLBACK EnumWindowsProc(_In_ HWND hwnd, _In_ LPARAM lParam)
 	if (result) {
 		new_proc_hwnd = hwnd;
 
-		if (g_removeTitle) {
-			//HWND hwnd = HWND(0x0000000000080928); // 0x0000000000080928
+		if (g_removeWindowStyle) {
 			LONG_PTR windowLongPtr = GetWindowLongPtr(hwnd, GWL_STYLE);
-			//windowLongPtr &= ~WS_CAPTION windowLongPtr &= ~WS_CAPTION& ~WS_SYSMENU & ~WS_OVERLAPPED;
-			windowLongPtr &= ~WS_CAPTION;
+			windowLongPtr &= ~g_removeWindowStyle;
 			SetWindowLongPtr(hwnd, GWL_STYLE, windowLongPtr);
+		}
+		if (g_removeMenu) {
+			HMENU hwndMenu = GetMenu(hwnd);
+			SetMenu(hwnd, NULL);
+			DestroyMenu(hwndMenu);
 		}
 	}
 
@@ -64,7 +70,12 @@ void wmain(int argc, wchar_t* __restrict argv[])
 				changeSize = true;
 				wait_time = _tcstoul(*++arg, nullptr, 10);
 			} else if (!WSTRCMP_CONST(*arg, L"-title"))
-				g_removeTitle = true;
+				//g_removeTitle = true;
+				g_removeWindowStyle |= WS_CAPTION;
+			else if (!WSTRCMP_CONST(*arg, L"-menu")) {
+				g_removeMenu = true;
+				g_removeWindowStyle |= WS_SYSMENU;
+			}
 		}
 	}
 
@@ -86,9 +97,19 @@ void wmain(int argc, wchar_t* __restrict argv[])
 
 // for dev test
 void test() {
-	HWND hwnd = HWND(0x0000000000080928); // 0x0000000000080928
+	HWND hwnd = HWND(0x0000000000390D0E); // 0x0000000000080928
 	LONG_PTR windowLongPtr = GetWindowLongPtr(hwnd, GWL_STYLE);
 	//windowLongPtr &= ~WS_CAPTION windowLongPtr &= ~WS_CAPTION& ~WS_SYSMENU & ~WS_OVERLAPPED;
 	windowLongPtr &= ~WS_CAPTION;
+	windowLongPtr &= ~WS_SYSMENU;
+	//windowLongPtr &= ~WS_OVERLAPPED;
 	SetWindowLongPtr(hwnd, GWL_STYLE, windowLongPtr);
+
+	windowLongPtr = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+	windowLongPtr &= ~WS_EX_WINDOWEDGE;
+	SetWindowLongPtr(hwnd, GWL_EXSTYLE, windowLongPtr);
+	HMENU hwndMenu = GetMenu(hwnd);
+	SetMenu(hwnd, NULL);
+	BOOL bmenu = DestroyMenu(hwndMenu);
+	SetMenu(hwnd, hwndMenu);
 }
