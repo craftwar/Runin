@@ -12,8 +12,15 @@ BOOL CALLBACK EnumWindowsProc(_In_ HWND hwnd, _In_ LPARAM lParam)
 	DWORD pid;
 	GetWindowThreadProcessId(hwnd, &pid);
 	const BOOL result = new_proc_pid == pid && IsWindowVisible(hwnd);
-	if (result)
+	if (result) {
 		new_proc_hwnd = hwnd;
+
+		//HWND hwnd = HWND(0x0000000000080928); // 0x0000000000080928
+		LONG_PTR windowLongPtr = GetWindowLongPtr(hwnd, GWL_STYLE);
+		//windowLongPtr &= ~WS_CAPTION windowLongPtr &= ~WS_CAPTION& ~WS_SYSMENU & ~WS_OVERLAPPED;
+		windowLongPtr &= ~WS_CAPTION;
+		SetWindowLongPtr(hwnd, GWL_STYLE, windowLongPtr);
+	}
 
 	return !result;
 }
