@@ -44,20 +44,20 @@ void wmain(int argc, wchar_t* __restrict argv[])
 	PROCESS_INFORMATION pi = { 0 };
 	si.cb = sizeof(STARTUPINFO);
 	DWORD wait_time = 5000;
-	UINT uFlags = 0;
+	UINT uFlags = SWP_NOMOVE | SWP_NOSIZE;
 
 	// later arg override early ones
 	{
 		wchar_t** const end = argv + argc;
 		for (wchar_t* __restrict* __restrict arg = argv + 1; arg < end; ++arg) {
 			if (!WSTRCMP_CONST(*arg, L"-pos")) {
-				changePos = true;
 				si.dwFlags |= STARTF_USEPOSITION;
+				uFlags &= ~SWP_NOMOVE;
 				si.dwX = _tcstoul(*++arg, nullptr, 10);
 				si.dwY = _tcstoul(*++arg, nullptr, 10);
 			} else if (!WSTRCMP_CONST(*arg, L"-size")) {
-				changeSize = true;
 				si.dwFlags |= STARTF_USESIZE;
+				uFlags &= ~SWP_NOSIZE;
 				si.dwXSize = _tcstoul(*++arg, nullptr, 10);
 				si.dwYSize = _tcstoul(*++arg, nullptr, 10);
 			} else if (!WSTRCMP_CONST(*arg, L"-wait")) {
@@ -67,11 +67,6 @@ void wmain(int argc, wchar_t* __restrict argv[])
 				g_removeTitle = true;
 		}
 	}
-
-	if (!changePos)
-		uFlags |= SWP_NOMOVE;
-	if (!changeSize)
-		uFlags |= SWP_NOSIZE;
 
 	// set working directory to program directory or some may work incorrectly
 	wchar_t *ptr = wcsrchr(argv[1], L'\\');
