@@ -1,20 +1,22 @@
-Start program in specified position and size
+Start program window in specified position and size
 
-Runin {program to start} {posX} {posY} [SizeX SizeY] [SleepTime]
+Runin {program to start} {1 or more options}
 {} means required arguemnts
 [] means optional arguments
-sleeps SleepTime ms
-When SleepTime = 0, disable "wait and SetWindowPos"
 
-It can take 4~6 arguments.
-4 arguments, 4th argument is parsed as SleepTime
-5+ arguments, 4~5th arguments are parsed as width and heigh
-6 arguments, 6th argument is parsed as SleepTime
+Options can be specified in any postion after target program
+-pos	x y
+-size	sizeX sizeY
+-title
+	remove title bar (not working for every program)
+-wait	milliseconds (default 5000ms)
+	delay milliseconds to change target program window
+
 
 usage example
 
 start firefox in (200, 300) width 1600 heigh 900
-Runin.exe firefox.exe 200 300 1600 900
+Runin.exe firefox.exe -pos 200 300 -size 1600 900
 
-start chrome in (200, 300), sleep 5000ms
-Runin.exe chrome.exe 200 300 5000
+start chrome in (200, 300), wait 5000ms
+Runin.exe chrome.exe -pos 200 300 -wait 5000
