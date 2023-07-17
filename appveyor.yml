@@ -2,13 +2,13 @@ version: '{build}'
 skip_commits:
   files:
     - README.md
-image: Visual Studio 2019
+image: Visual Studio 2022
 init:
 - ps: if (0) { iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1')) } #rdp debug
 
 build_script:
 #- '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64_x86' #use cross build x86 to speed up?
-- '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64'
+#- '"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64'
 - call msbuild /m /p:Configuration=Release /p:Platform=x64 Runin.sln /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 - 7z a %APPVEYOR_BUILD_FOLDER%\Runin.7z -mx=9 -myx=9 x64\Release\Runin.exe Runin\ReadME.txt
 
