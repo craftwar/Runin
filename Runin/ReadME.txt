@@ -23,3 +23,6 @@ Runin.exe "C:\Program Files\Mozilla Firefox\firefox.exe" -pos 200 300 -size 1600
 
 start chrome in (200, 300), wait 5000ms
 Runin.exe chrome.exe -pos 200 300 -wait 5000
+
+start Telegram with "always on top"
+Runin.exe "%appdata%\Telegram Desktop\Telegram.exe" -top
