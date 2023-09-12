@@ -1,12 +1,13 @@
 #include "pch.h"
 #include <Windows.h>
 #include <tchar.h>
+#include <time.h>
 
 #define WSTRCMP_CONST(str, const_str) \
 	wmemcmp(str, const_str, sizeof(const_str) / sizeof(*const_str))
 void test();
 
-HWND new_proc_hwnd = NULL;
+volatile HWND new_proc_hwnd = NULL;
 //bool g_removeTitle = false;
 bool g_removeMenu = false;
 LONG_PTR g_removeWindowStyle = 0;
@@ -18,7 +19,8 @@ BOOL CALLBACK EnumWindowsProc(_In_ HWND hwnd, _In_ LPARAM lParam)
 	const DWORD new_proc_pid = *(DWORD *)lParam;
 	DWORD pid;
 	GetWindowThreadProcessId(hwnd, &pid);
-	const BOOL result = new_proc_pid == pid && IsWindowVisible(hwnd);
+	// filter more window? not child window and not owned window
+	BOOL result = ((new_proc_pid == pid) && IsWindowVisible(hwnd));
 	if (result) {
 		new_proc_hwnd = hwnd;
 
@@ -49,7 +51,9 @@ void wmain(int argc, wchar_t* __restrict argv[])
 	STARTUPINFO si = { 0 };
 	PROCESS_INFORMATION pi = { 0 };
 	si.cb = sizeof(STARTUPINFO);
-	DWORD wait_time = 5000;
+	DWORD find_wait = 30;
+	DWORD init_wait = 10000;
+	DWORD delay_time = 5000;
 	HWND hWndInsertAfter = HWND_TOP;
 	UINT uFlags = SWP_NOMOVE | SWP_NOSIZE;
 
@@ -67,12 +71,17 @@ void wmain(int argc, wchar_t* __restrict argv[])
 				uFlags &= ~SWP_NOSIZE;
 				si.dwXSize = _tcstoul(*++arg, nullptr, 10);
 				si.dwYSize = _tcstoul(*++arg, nullptr, 10);
-			}
-			else if (!WSTRCMP_CONST(*arg, L"-top")) {
+			} else if (!WSTRCMP_CONST(*arg, L"-top")) {
 				hWndInsertAfter = HWND_TOPMOST;
-			} else if (!WSTRCMP_CONST(*arg, L"-wait")) {
+			} else if (!WSTRCMP_CONST(*arg, L"-find_wait")) {
 				changeSize = true;
-				wait_time = _tcstoul(*++arg, nullptr, 10);
+				find_wait = _tcstoul(*++arg, nullptr, 10);
+			} else if (!WSTRCMP_CONST(*arg, L"-init_wait")) {
+				changeSize = true;
+				init_wait = _tcstoul(*++arg, nullptr, 10);
+			} else if (!WSTRCMP_CONST(*arg, L"-delay")) {
+				changeSize = true;
+				delay_time = _tcstoul(*++arg, nullptr, 10);
 			} else if (!WSTRCMP_CONST(*arg, L"-title"))
 				//g_removeTitle = true;
 				g_removeWindowStyle |= WS_CAPTION;
@@ -91,11 +100,22 @@ void wmain(int argc, wchar_t* __restrict argv[])
 	// don't check CreateProcess return (assume create successful, no crash if fail)
 	// SetWindowPos won't crash if new_proc_hwnd is null
 	#pragma warning( disable : 6335) // handle will be released after Runin ends, don't need to CloseHandle()
-	CreateProcess(NULL, argv[1], NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | CREATE_NEW_PROCESS_GROUP | INHERIT_PARENT_AFFINITY, NULL, workingDirectory, &si, &pi);
-	if (wait_time) {
-		Sleep(wait_time);
-		EnumWindows(EnumWindowsProc, (LPARAM)&pi.dwProcessId);
-		SetWindowPos(new_proc_hwnd, hWndInsertAfter, si.dwX, si.dwY, si.dwXSize, si.dwYSize, uFlags| SWP_SHOWWINDOW);
+	BOOL result = CreateProcess(NULL, argv[1], NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | CREATE_NEW_PROCESS_GROUP | INHERIT_PARENT_AFFINITY, NULL, workingDirectory, &si, &pi);
+	if (result) {
+		const time_t end_time = time(NULL) + find_wait;
+		if (!WaitForInputIdle(pi.hProcess, find_wait * 1000) && init_wait)
+			Sleep(init_wait); // some program may need extra sleep to wait?
+		do {
+			EnumWindows(EnumWindowsProc, (LPARAM)&pi.dwProcessId);
+			if (new_proc_hwnd) {
+				result = SetWindowPos(new_proc_hwnd, hWndInsertAfter, si.dwX, si.dwY, si.dwXSize, si.dwYSize, uFlags | SWP_SHOWWINDOW);
+				if (!result)
+					DWORD error = GetLastError();
+				else
+					break;
+			} else
+			Sleep(delay_time);
+		} while (time(NULL) < end_time);
 	}
 }
 
